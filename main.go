@@ -18,14 +18,14 @@ type Worker struct {
 func main() {
 	workers := []Worker{
 		{
-			"reverse",
-			[]interface{}{"Hello World"},
-			2,
+			Function: "reverse",
+			Args:     []interface{}{"Hello World"},
+			Sleep:    2,
 		},
 		{
-			"uppercase",
-			[]interface{}{"Me gustan los tacos"},
-			4,
+			Function: "uppercase",
+			Args:     []interface{}{"Me gustan los tacos"},
+			Sleep:    4,
 		},
 		{
 			Function: "caesar",
