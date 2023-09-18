@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"reflect"
 	"strings"
 	"sync"
 	"syscall"
@@ -13,15 +14,38 @@ import (
 
 type Worker struct {
 	Function string
-	Input    string
+	Input    []reflect.Value
 	Sleep    int32
 }
 
+var (
+	functionMap = map[string]interface{}{
+		"reverse":   reverse,
+		"uppercase": uppercase,
+		"caesar":    caesar,
+	}
+)
+
 func main() {
 	workers := []Worker{
-		{"reverse", "hello", 2},
-		{"uppercase", "hello", 4},
-		{"uppercaseNext", "hello", 6},
+		{
+			"reverse",
+			[]reflect.Value{reflect.ValueOf("Hello World")},
+			2,
+		},
+		{
+			"uppercase",
+			[]reflect.Value{reflect.ValueOf("Me gustan los tacos")},
+			4,
+		},
+		{
+			"caesar",
+			[]reflect.Value{
+				reflect.ValueOf("Lol Caesar"),
+				reflect.ValueOf(13),
+			},
+			6,
+		},
 	}
 
 	shutdownChan := make(chan struct{})
@@ -61,6 +85,13 @@ func doWork(id int, w Worker, shutdownChan chan struct{}, wg *sync.WaitGroup) {
 			return
 		default:
 			fmt.Printf("Goroutine %d is running\n", id)
+			fn, ok := functionMap[w.Function]
+			if !ok {
+				fmt.Printf("Function %s not found\n", w.Function)
+				return
+			}
+			result := reflect.ValueOf(fn).Call(w.Input)
+			fmt.Printf("Goroutine %d: %s(%s) = %s\n", id, w.Function, w.Input, result)
 			fmt.Printf("Sleeping for %d seconds\n", w.Sleep)
 			time.Sleep(time.Duration(w.Sleep) * time.Second)
 		}
@@ -68,8 +99,6 @@ func doWork(id int, w Worker, shutdownChan chan struct{}, wg *sync.WaitGroup) {
 }
 
 func reverse(s string) string {
-	// Convert string to rune slice.
-	// ... This method works on the level of runes, not bytes.
 	data := []rune(s)
 	result := []rune{}
 	for i := len(data) - 1; i >= 0; i-- {
@@ -82,17 +111,23 @@ func uppercase(s string) string {
 	return strings.ToUpper(s)
 }
 
-func uppercaseNext(s string) string {
-	data := []rune(s)
-	result := []rune{}
-	for i := 0; i < len(data); i++ {
-		if unicode.IsUpper(data[i]) {
-			result = append(result, unicode.ToLower(data[i]))
-			result = append(result, unicode.ToUpper(data[i+1]))
-			i++
+func caesar(input string, shift int) string {
+	runes := []rune(input)
+	shifted := make([]rune, len(runes))
+
+	for i, char := range runes {
+		if unicode.IsLetter(char) {
+			var base rune
+			if unicode.IsUpper(char) {
+				base = 'A'
+			} else {
+				base = 'a'
+			}
+			shifted[i] = (char-base+rune(shift))%26 + base
 		} else {
-			result = append(result, unicode.ToUpper(data[i]))
+			shifted[i] = char
 		}
 	}
-	return string(result)
+
+	return string(shifted)
 }
