@@ -18,13 +18,51 @@ type Worker struct {
 	Sleep    int32
 }
 
+type FunctionInfo struct {
+	Name     string
+	Function interface{}
+}
+
 var (
-	functionMap = map[string]interface{}{
-		"reverse":   reverse,
-		"uppercase": uppercase,
-		"caesar":    caesar,
-	}
+	functionMap      = make(map[string]FunctionInfo)
+	functionMapMutex sync.Mutex
 )
+
+// var (
+// 	functionMap = map[string]interface{}{
+// 		"reverse":   reverse,
+// 		"uppercase": uppercase,
+// 		"caesar":    caesar,
+// 	}
+// )
+
+func registerFunction(name string, function interface{}) {
+	functionMapMutex.Lock()
+	defer functionMapMutex.Unlock()
+
+	functionMap[name] = FunctionInfo{
+		Name:     name,
+		Function: function,
+	}
+}
+
+func callFunctionByName(name string, args []reflect.Value) interface{} {
+	functionMapMutex.Lock()
+	defer functionMapMutex.Unlock()
+
+	functionInfo, found := functionMap[name]
+	if !found {
+		return nil
+	}
+
+	result := reflect.ValueOf(functionInfo.Function).Call(args)
+
+	if len(result) > 0 {
+		return result[0].Interface()
+	}
+
+	return nil
+}
 
 func main() {
 	workers := []Worker{
@@ -47,6 +85,10 @@ func main() {
 			6,
 		},
 	}
+
+	registerFunction("reverse", reverse)
+	registerFunction("uppercase", uppercase)
+	registerFunction("caesar", caesar)
 
 	shutdownChan := make(chan struct{})
 	var wg sync.WaitGroup
@@ -85,13 +127,10 @@ func doWork(id int, w Worker, shutdownChan chan struct{}, wg *sync.WaitGroup) {
 			return
 		default:
 			fmt.Printf("Goroutine %d is running\n", id)
-			fn, ok := functionMap[w.Function]
-			if !ok {
-				fmt.Printf("Function %s not found\n", w.Function)
-				return
-			}
-			result := reflect.ValueOf(fn).Call(w.Input)
+
+			result := callFunctionByName(w.Function, w.Input)
 			fmt.Printf("Goroutine %d: %s(%s) = %s\n", id, w.Function, w.Input, result)
+
 			fmt.Printf("Sleeping for %d seconds\n", w.Sleep)
 			time.Sleep(time.Duration(w.Sleep) * time.Second)
 		}
