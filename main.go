@@ -36,8 +36,6 @@ func main() {
 	select {
 	case <-sigChan:
 		fmt.Println("Received SIGINT. Shutting down...")
-	case <-time.After(120 * time.Second):
-		fmt.Println("Timeout. Shutting down...")
 	}
 
 	// Signal the goroutines to shut down
