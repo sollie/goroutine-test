@@ -73,12 +73,9 @@ func doWork(id int, w Worker, shutdownChan chan struct{}, wg *sync.WaitGroup) {
 			fmt.Printf("Goroutine %d received shutdown signal\n", id)
 			return
 		default:
-			fmt.Printf("Goroutine %d is running\n", id)
-
 			result := callFunctionByName(w)
-			fmt.Printf("Goroutine %d: %s(%s) = %s\n", id, w.Function, w.Args, result)
+			fmt.Printf("Goroutine %d: %s(%s) = %s \t - sleeping for %d seconds\n", id, w.Function, w.Args, result, w.Sleep)
 
-			fmt.Printf("Sleeping for %d seconds\n", w.Sleep)
 			time.Sleep(time.Duration(w.Sleep) * time.Second)
 		}
 	}
