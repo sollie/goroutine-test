@@ -2,6 +2,15 @@ package main
 
 func init() {
 	registerFunction("reverse", reverse)
+
+	workers = append(workers, Worker{
+		Function: "reverse",
+		Args: []interface{}{
+			"Hello World",
+		},
+		Sleep: 5,
+	},
+	)
 }
 
 func reverse(s string) string {

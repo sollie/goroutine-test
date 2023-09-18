@@ -15,28 +15,11 @@ type Worker struct {
 	Sleep    int32
 }
 
-func main() {
-	workers := []Worker{
-		{
-			Function: "reverse",
-			Args:     []interface{}{"Hello World"},
-			Sleep:    2,
-		},
-		{
-			Function: "uppercase",
-			Args:     []interface{}{"Me gustan los tacos"},
-			Sleep:    4,
-		},
-		{
-			Function: "caesar",
-			Args: []interface{}{
-				"Lol Caesar",
-				13,
-			},
-			Sleep: 6,
-		},
-	}
+var (
+	workers = []Worker{}
+)
 
+func main() {
 	shutdownChan := make(chan struct{})
 	var wg sync.WaitGroup
 

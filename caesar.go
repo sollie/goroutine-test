@@ -6,6 +6,16 @@ import (
 
 func init() {
 	registerFunction("caesar", caesar)
+
+	workers = append(workers, Worker{
+		Function: "caesar",
+		Args: []interface{}{
+			"Lol Caesar",
+			13,
+		},
+		Sleep: 2,
+	},
+	)
 }
 
 func caesar(input string, shift int) string {
