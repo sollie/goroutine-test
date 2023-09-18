@@ -5,11 +5,9 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
-	"unicode"
 )
 
 type Worker struct {
@@ -86,10 +84,6 @@ func main() {
 		},
 	}
 
-	registerFunction("reverse", reverse)
-	registerFunction("uppercase", uppercase)
-	registerFunction("caesar", caesar)
-
 	shutdownChan := make(chan struct{})
 	var wg sync.WaitGroup
 
@@ -135,38 +129,4 @@ func doWork(id int, w Worker, shutdownChan chan struct{}, wg *sync.WaitGroup) {
 			time.Sleep(time.Duration(w.Sleep) * time.Second)
 		}
 	}
-}
-
-func reverse(s string) string {
-	data := []rune(s)
-	result := []rune{}
-	for i := len(data) - 1; i >= 0; i-- {
-		result = append(result, data[i])
-	}
-	return string(result)
-}
-
-func uppercase(s string) string {
-	return strings.ToUpper(s)
-}
-
-func caesar(input string, shift int) string {
-	runes := []rune(input)
-	shifted := make([]rune, len(runes))
-
-	for i, char := range runes {
-		if unicode.IsLetter(char) {
-			var base rune
-			if unicode.IsUpper(char) {
-				base = 'A'
-			} else {
-				base = 'a'
-			}
-			shifted[i] = (char-base+rune(shift))%26 + base
-		} else {
-			shifted[i] = char
-		}
-	}
-
-	return string(shifted)
 }
