@@ -12,17 +12,12 @@ import (
 
 type Worker struct {
 	Function string
-	Input    []reflect.Value
+	Args     []interface{}
 	Sleep    int32
 }
 
-type FunctionInfo struct {
-	Name     string
-	Function interface{}
-}
-
 var (
-	functionMap      = make(map[string]FunctionInfo)
+	functionMap      = make(map[string]reflect.Value)
 	functionMapMutex sync.Mutex
 )
 
@@ -30,22 +25,24 @@ func registerFunction(name string, function interface{}) {
 	functionMapMutex.Lock()
 	defer functionMapMutex.Unlock()
 
-	functionMap[name] = FunctionInfo{
-		Name:     name,
-		Function: function,
-	}
+	functionMap[name] = reflect.ValueOf(function)
 }
 
-func callFunctionByName(name string, args []reflect.Value) interface{} {
+func callFunctionByName(w Worker) interface{} {
 	functionMapMutex.Lock()
 	defer functionMapMutex.Unlock()
 
-	functionInfo, found := functionMap[name]
+	functionInfo, found := functionMap[w.Function]
 	if !found {
 		return nil
 	}
 
-	result := reflect.ValueOf(functionInfo.Function).Call(args)
+	args := make([]reflect.Value, len(w.Args))
+	for i, arg := range w.Args {
+		args[i] = reflect.ValueOf(arg)
+	}
+
+	result := functionInfo.Call(args)
 
 	if len(result) > 0 {
 		return result[0].Interface()
@@ -58,21 +55,21 @@ func main() {
 	workers := []Worker{
 		{
 			"reverse",
-			[]reflect.Value{reflect.ValueOf("Hello World")},
+			[]interface{}{"Hello World"},
 			2,
 		},
 		{
 			"uppercase",
-			[]reflect.Value{reflect.ValueOf("Me gustan los tacos")},
+			[]interface{}{"Me gustan los tacos"},
 			4,
 		},
 		{
-			"caesar",
-			[]reflect.Value{
-				reflect.ValueOf("Lol Caesar"),
-				reflect.ValueOf(13),
+			Function: "caesar",
+			Args: []interface{}{
+				"Lol Caesar",
+				13,
 			},
-			6,
+			Sleep: 6,
 		},
 	}
 
@@ -114,8 +111,8 @@ func doWork(id int, w Worker, shutdownChan chan struct{}, wg *sync.WaitGroup) {
 		default:
 			fmt.Printf("Goroutine %d is running\n", id)
 
-			result := callFunctionByName(w.Function, w.Input)
-			fmt.Printf("Goroutine %d: %s(%s) = %s\n", id, w.Function, w.Input, result)
+			result := callFunctionByName(w)
+			fmt.Printf("Goroutine %d: %s(%s) = %s\n", id, w.Function, w.Args, result)
 
 			fmt.Printf("Sleeping for %d seconds\n", w.Sleep)
 			time.Sleep(time.Duration(w.Sleep) * time.Second)
