@@ -26,14 +26,6 @@ var (
 	functionMapMutex sync.Mutex
 )
 
-// var (
-// 	functionMap = map[string]interface{}{
-// 		"reverse":   reverse,
-// 		"uppercase": uppercase,
-// 		"caesar":    caesar,
-// 	}
-// )
-
 func registerFunction(name string, function interface{}) {
 	functionMapMutex.Lock()
 	defer functionMapMutex.Unlock()
