@@ -4,50 +4,22 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"reflect"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
-	"unicode"
 )
 
 type Worker struct {
 	Function string
-	Input    []reflect.Value
+	Args     []interface{}
 	Sleep    int32
 }
 
 var (
-	functionMap = map[string]interface{}{
-		"reverse":   reverse,
-		"uppercase": uppercase,
-		"caesar":    caesar,
-	}
+	workers = []Worker{}
 )
 
 func main() {
-	workers := []Worker{
-		{
-			"reverse",
-			[]reflect.Value{reflect.ValueOf("Hello World")},
-			2,
-		},
-		{
-			"uppercase",
-			[]reflect.Value{reflect.ValueOf("Me gustan los tacos")},
-			4,
-		},
-		{
-			"caesar",
-			[]reflect.Value{
-				reflect.ValueOf("Lol Caesar"),
-				reflect.ValueOf(13),
-			},
-			6,
-		},
-	}
-
 	shutdownChan := make(chan struct{})
 	var wg sync.WaitGroup
 
@@ -64,8 +36,6 @@ func main() {
 	select {
 	case <-sigChan:
 		fmt.Println("Received SIGINT. Shutting down...")
-	case <-time.After(120 * time.Second):
-		fmt.Println("Timeout. Shutting down...")
 	}
 
 	// Signal the goroutines to shut down
@@ -84,50 +54,10 @@ func doWork(id int, w Worker, shutdownChan chan struct{}, wg *sync.WaitGroup) {
 			fmt.Printf("Goroutine %d received shutdown signal\n", id)
 			return
 		default:
-			fmt.Printf("Goroutine %d is running\n", id)
-			fn, ok := functionMap[w.Function]
-			if !ok {
-				fmt.Printf("Function %s not found\n", w.Function)
-				return
-			}
-			result := reflect.ValueOf(fn).Call(w.Input)
-			fmt.Printf("Goroutine %d: %s(%s) = %s\n", id, w.Function, w.Input, result)
-			fmt.Printf("Sleeping for %d seconds\n", w.Sleep)
+			result := callFunctionByName(w)
+			fmt.Printf("Goroutine %d: %s(%s) = %s \t - sleeping for %d seconds\n", id, w.Function, w.Args, result, w.Sleep)
+
 			time.Sleep(time.Duration(w.Sleep) * time.Second)
 		}
 	}
-}
-
-func reverse(s string) string {
-	data := []rune(s)
-	result := []rune{}
-	for i := len(data) - 1; i >= 0; i-- {
-		result = append(result, data[i])
-	}
-	return string(result)
-}
-
-func uppercase(s string) string {
-	return strings.ToUpper(s)
-}
-
-func caesar(input string, shift int) string {
-	runes := []rune(input)
-	shifted := make([]rune, len(runes))
-
-	for i, char := range runes {
-		if unicode.IsLetter(char) {
-			var base rune
-			if unicode.IsUpper(char) {
-				base = 'A'
-			} else {
-				base = 'a'
-			}
-			shifted[i] = (char-base+rune(shift))%26 + base
-		} else {
-			shifted[i] = char
-		}
-	}
-
-	return string(shifted)
 }
